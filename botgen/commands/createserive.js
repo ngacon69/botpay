@@ -195,6 +195,26 @@ module.exports.handleInteractions = (client) => {
             await handleAddStock(interaction);
         }
     });
+
+    // Handle modal submissions - SỬA: Sử dụng client từ parameter
+    client.on('interactionCreate', async (interaction) => {
+        if (!interaction.isModalSubmit()) return;
+
+        if (interaction.customId.startsWith('editServiceModal_')) {
+            await handleEditServiceModal(interaction);
+        }
+    });
+
+    // Handle delete confirmations - SỬA: Sử dụng client từ parameter
+    client.on('interactionCreate', async (interaction) => {
+        if (!interaction.isButton()) return;
+
+        if (interaction.customId.startsWith('confirm_delete_')) {
+            await handleConfirmDelete(interaction);
+        } else if (interaction.customId.startsWith('cancel_delete_')) {
+            await handleCancelDelete(interaction);
+        }
+    });
 };
 
 async function handleEditService(interaction) {
@@ -334,15 +354,6 @@ async function handleAddStock(interaction) {
     });
 }
 
-// Handle modal submissions
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isModalSubmit()) return;
-
-    if (interaction.customId.startsWith('editServiceModal_')) {
-        await handleEditServiceModal(interaction);
-    }
-});
-
 async function handleEditServiceModal(interaction) {
     const serviceId = interaction.customId.replace('editServiceModal_', '');
     const newName = interaction.fields.getTextInputValue('editName');
@@ -381,17 +392,6 @@ async function handleEditServiceModal(interaction) {
         });
     }
 }
-
-// Handle delete confirmations
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
-
-    if (interaction.customId.startsWith('confirm_delete_')) {
-        await handleConfirmDelete(interaction);
-    } else if (interaction.customId.startsWith('cancel_delete_')) {
-        await handleCancelDelete(interaction);
-    }
-});
 
 async function handleConfirmDelete(interaction) {
     const serviceId = interaction.customId.replace('confirm_delete_', '');
