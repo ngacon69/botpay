@@ -3,23 +3,22 @@ const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed
 const userRequests = new Map();
 const payoutHistory = [];
 const activePanels = new Map();
-const userVouchTimers = new Map();
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('panelpayout')
-        .setDescription('🎁 Create an invite rewards payout panel')
+        .setDescription('Create payout panel')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addChannelOption(option =>
             option.setName('channel')
-                .setDescription('Select channel to send the panel')
+                .setDescription('Channel to send panel')
                 .setRequired(false)
                 .addChannelTypes(ChannelType.GuildText)),
     
     async execute(interaction) {
         if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({
-                content: '❌ You need administrator permissions to use this command.',
+                content: '❌ You need administrator permissions.',
                 ephemeral: true
             });
         }
@@ -32,25 +31,23 @@ module.exports = {
         
         if (existingPanel) {
             return interaction.reply({
-                content: `❌ There is already an active payout panel in ${targetChannel}.`,
+                content: `❌ Active panel already exists in ${targetChannel}.`,
                 ephemeral: true
             });
         }
 
-        // Premium color selection modal
         const colorModal = new ModalBuilder()
             .setCustomId(`color_modal_${targetChannel.id}`)
-            .setTitle('🎨 Panel Customization')
+            .setTitle('Panel Color')
             .setComponents(
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder()
                         .setCustomId('color_input')
-                        .setLabel('Embed Color (Hex Code)')
+                        .setLabel('Embed Color (Hex)')
                         .setPlaceholder('#5865F2')
                         .setValue('#5865F2')
                         .setStyle(TextInputStyle.Short)
                         .setRequired(true)
-                        .setMaxLength(7)
                 )
             );
 
@@ -69,79 +66,45 @@ module.exports = {
             const hexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
             if (!hexColorRegex.test(embedColor)) {
                 return modalResponse.reply({
-                    content: '❌ Invalid color format! Please use hex format (e.g., #FF0000)',
+                    content: '❌ Invalid color format! Use hex format.',
                     ephemeral: true
                 });
             }
 
-            // ULTRA PREMIUM EMBED DESIGN
+            // Simple clean embed
             const payoutEmbed = new EmbedBuilder()
                 .setColor(embedColor)
-                .setTitle('✨ **INVITE REWARDS SYSTEM** ✨')
-                .setDescription([
-                    '🎉 **Welcome to our Exclusive Rewards Program!** 🎉',
-                    '',
-                    '**Invite friends and claim amazing rewards!** 💫',
-                    'All rewards are delivered directly to your DMs instantly! 🚀',
-                    '',
-                    '**⚠️ IMPORTANT:** You have **48 HOURS** to vouch after receiving your reward!',
-                    'Failure to vouch will result in **PERMANENT BAN** from future events! 🔨'
-                ].join('\n'))
+                .setTitle('🎁 Invite Rewards')
+                .setDescription('Claim rewards based on your invites. All rewards sent via DM.')
                 .addFields(
                     {
-                        name: '🟩 **MINECRAFT REWARDS** 🟩',
-                        value: [
-                            '```diff',
-                            '+ 🎯 2 INVITES → Minecraft Account',
-                            '+ 🎯 5 INVITES → 3 Minecraft Accounts',
-                            '```',
-                            '*All accounts are Non-Full Access*'
-                        ].join('\n'),
+                        name: 'Minecraft',
+                        value: '• 2 invites → Minecraft Account\n• 5 invites → 3 Minecraft Accounts',
                         inline: false
                     },
                     {
-                        name: '🟦 **XBOX REWARDS** 🟦',
-                        value: [
-                            '```diff',
-                            '+ 🎮 5 INVITES → Xbox GamePass',
-                            '+ 🎮 8 INVITES → Xbox Ultimate',
-                            '```',
-                            '*Premium gaming experience*'
-                        ].join('\n'),
+                        name: 'Xbox',
+                        value: '• 5 invites → Xbox GamePass\n• 8 invites → Xbox Ultimate',
                         inline: false
                     },
                     {
-                        name: '🟨 **METHOD REWARDS** 🟨',
-                        value: [
-                            '```diff',
-                            '+ 💰 6 INVITES → Robux Method',
-                            '+ 💳 10 INVITES → 1K Method',
-                            '+ 💎 15 INVITES → 3K Method',
-                            '```',
-                            '*Proven working methods*'
-                        ].join('\n'),
+                        name: 'Methods',
+                        value: '• 6 invites → Robux Method\n• 10 invites → 1k Method\n• 15 invites → 3k Method',
                         inline: false
                     }
                 )
-                .setImage('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/banner_rewards.png?width=1200&height=300')
-                .setThumbnail('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/gift_icon.png')
-                .setFooter({ 
-                    text: '🎁 Premium Rewards System • One request per user • DMs must be open',
-                    iconURL: 'https://media.discordapp.net/attachments/123456789012345678/123456789012345678/shield_icon.png'
-                })
-                .setTimestamp();
+                .setFooter({ text: 'One request per user • DMs must be open' });
 
-            // Premium button design
             const claimButton = new ButtonBuilder()
                 .setCustomId('claim_reward')
-                .setLabel('🎁 CLAIM YOUR REWARD')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('✨');
+                .setLabel('Claim Reward')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🎁');
 
             const buttonRow = new ActionRowBuilder().addComponents(claimButton);
 
             await modalResponse.reply({
-                content: `✅ **Premium payout panel created successfully in ${targetChannel}!**`,
+                content: `✅ Panel created in ${targetChannel}!`,
                 ephemeral: true
             });
 
@@ -158,23 +121,16 @@ module.exports = {
                 color: embedColor
             });
 
-            await this.logPayoutAction(
-                interaction.client,
-                'PANEL_CREATED',
-                `Premium payout panel created in ${targetChannel} by ${interaction.user.tag}`,
-                interaction.user
-            );
-
         } catch (error) {
             if (error.name === 'Error [InteractionCollectorError]') {
                 await interaction.followUp({
-                    content: '⏰ Timeout! Please run the command again.',
+                    content: '❌ Timeout! Try again.',
                     ephemeral: true
                 });
             } else {
-                console.error('Error creating payout panel:', error);
+                console.error('Error:', error);
                 await interaction.followUp({
-                    content: '❌ An error occurred while creating the payout panel.',
+                    content: '❌ Error creating panel.',
                     ephemeral: true
                 });
             }
@@ -186,16 +142,7 @@ module.exports = {
             const panel = activePanels.get(interaction.message.id);
             if (!panel) {
                 return interaction.reply({
-                    content: '❌ **This rewards panel has expired!** Please contact staff for assistance.',
-                    ephemeral: true
-                });
-            }
-
-            // Check if user is banned from events
-            const userBanned = this.isUserBanned(interaction.user.id);
-            if (userBanned) {
-                return interaction.reply({
-                    content: '🚫 **You are banned from participating in events!**\nReason: Failed to vouch within 48 hours of receiving reward.',
+                    content: '❌ Panel not active.',
                     ephemeral: true
                 });
             }
@@ -208,58 +155,50 @@ module.exports = {
                 if (timeSinceRequest < cooldownTime && existingRequest.status !== 'COMPLETED') {
                     const remainingTime = Math.ceil((cooldownTime - timeSinceRequest) / 60000);
                     return interaction.reply({
-                        content: `⏳ **Please wait ${remainingTime} minutes!**\nYou already have an active reward request in progress.`,
+                        content: `❌ Wait ${remainingTime} minutes.`,
                         ephemeral: true
                     });
                 }
             }
 
-            // Premium selection menu
             const selectMenu = new StringSelectMenuBuilder()
                 .setCustomId('service_select')
-                .setPlaceholder('🎯 SELECT YOUR REWARD CATEGORY')
+                .setPlaceholder('Select reward')
                 .addOptions([
                     {
-                        label: '🟩 Minecraft Account (2 Invites)',
-                        description: 'Premium Minecraft Account - Non Full Access',
-                        value: 'minecraft_2',
-                        emoji: '🟩'
+                        label: 'Minecraft Account (2)',
+                        description: 'Minecraft Account',
+                        value: 'minecraft_2'
                     },
                     {
-                        label: '🟩 3 Minecraft Accounts (5 Invites)',
-                        description: 'Triple Minecraft Accounts Bundle',
-                        value: 'minecraft_5',
-                        emoji: '💎'
+                        label: '3 Minecraft Accounts (5)',
+                        description: '3 Minecraft Accounts',
+                        value: 'minecraft_5'
                     },
                     {
-                        label: '🟦 Xbox GamePass (5 Invites)',
-                        description: 'Xbox GamePass Subscription Account',
-                        value: 'xbox_gamepass',
-                        emoji: '🎮'
+                        label: 'Xbox GamePass (5)',
+                        description: 'Xbox GamePass',
+                        value: 'xbox_gamepass'
                     },
                     {
-                        label: '🟦 Xbox Ultimate (8 Invites)',
-                        description: 'Xbox Ultimate Premium Account',
-                        value: 'xbox_ultimate',
-                        emoji: '⭐'
+                        label: 'Xbox Ultimate (8)',
+                        description: 'Xbox Ultimate',
+                        value: 'xbox_ultimate'
                     },
                     {
-                        label: '🟨 Robux Method (6 Invites)',
-                        description: 'Advanced Robux Generation Method',
-                        value: 'robux_method',
-                        emoji: '💰'
+                        label: 'Robux Method (6)',
+                        description: 'Robux Method - 6 invites',
+                        value: 'robux_method'
                     },
                     {
-                        label: '🟨 1K Method (10 Invites)',
-                        description: 'Proven 1K Money Making Method',
-                        value: '1k_method',
-                        emoji: '💳'
+                        label: '1k Method (10)',
+                        description: '1k Method - 10 invites',
+                        value: '1k_method'
                     },
                     {
-                        label: '🟨 3K Method (15 Invites)',
-                        description: 'Premium 3K Advanced Method',
-                        value: '3k_method',
-                        emoji: '💎'
+                        label: '3k Method (15)',
+                        description: '3k Method - 15 invites',
+                        value: '3k_method'
                     }
                 ]);
 
@@ -272,29 +211,8 @@ module.exports = {
                 messageId: interaction.message.id
             });
 
-            // Premium selection embed
-            const selectionEmbed = new EmbedBuilder()
-                .setColor('#FFD700')
-                .setTitle('🎯 **SELECT YOUR REWARD**')
-                .setDescription('Choose your desired reward from the menu below! 🌟')
-                .addFields(
-                    {
-                        name: '📋 Instructions',
-                        value: '1. Select your reward category\n2. Follow the instructions\n3. Receive reward in DMs\n4. **VOUCH WITHIN 48 HOURS!**',
-                        inline: false
-                    },
-                    {
-                        name: '⚠️ Important Notice',
-                        value: 'Failure to vouch within 48 hours will result in **PERMANENT BAN** from all future events!',
-                        inline: false
-                    }
-                )
-                .setThumbnail('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/select_icon.png')
-                .setFooter({ text: 'Choose wisely! Each selection is final.' })
-                .setTimestamp();
-
             await interaction.reply({
-                embeds: [selectionEmbed],
+                content: 'Select your reward:',
                 components: [selectRow],
                 ephemeral: true
             });
@@ -313,13 +231,13 @@ module.exports = {
             });
 
             const serviceNames = {
-                'minecraft_2': '🟩 Minecraft Account (2 Invites)',
-                'minecraft_5': '💎 3 Minecraft Accounts (5 Invites)',
-                'xbox_gamepass': '🎮 Xbox GamePass (5 Invites)',
-                'xbox_ultimate': '⭐ Xbox Ultimate (8 Invites)',
-                'robux_method': '💰 Robux Method (6 Invites)',
-                '1k_method': '💳 1K Method (10 Invites)',
-                '3k_method': '💎 3K Method (15 Invites)'
+                'minecraft_2': 'Minecraft Account (2 invites)',
+                'minecraft_5': '3 Minecraft Accounts (5 invites)',
+                'xbox_gamepass': 'Xbox GamePass (5 invites)',
+                'xbox_ultimate': 'Xbox Ultimate (8 invites)',
+                'robux_method': 'Robux Method (6 invites)',
+                '1k_method': '1k Method (10 invites)',
+                '3k_method': '3k Method (15 invites)'
             };
 
             const inviteRequirements = {
@@ -334,39 +252,12 @@ module.exports = {
 
             const requiredInvites = inviteRequirements[selectedService];
 
-            // Premium method service handler
+            // Method services go to ticket channel
             if (['1k_method', '3k_method', 'robux_method'].includes(selectedService)) {
                 const ticketChannelId = '1429770480323133471';
                 
-                const methodEmbed = new EmbedBuilder()
-                    .setColor('#FFA500')
-                    .setTitle('🎫 **PREMIUM TICKET REQUIRED**')
-                    .setDescription(`**Selected Reward:** ${serviceNames[selectedService]}\n**Required Invites:** ${requiredInvites} invites`)
-                    .addFields(
-                        {
-                            name: '🚀 Next Steps',
-                            value: [
-                                '```bash',
-                                '#1 Go to ticket-create channel',
-                                '#2 Click "Create Ticket" button',
-                                '#3 Request your selected method',
-                                '#4 Staff will verify & assist you',
-                                '```'
-                            ].join('\n'),
-                            inline: false
-                        },
-                        {
-                            name: '📌 Important',
-                            value: '**Method rewards require manual verification for security and quality assurance.** 🔒',
-                            inline: false
-                        }
-                    )
-                    .setImage('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/ticket_banner.png')
-                    .setFooter({ text: 'Premium Method Verification • Secure Process' })
-                    .setTimestamp();
-
                 await interaction.update({
-                    embeds: [methodEmbed],
+                    content: `To claim **${serviceNames[selectedService]}**, create ticket in <#${ticketChannelId}>`,
                     components: []
                 });
 
@@ -374,104 +265,53 @@ module.exports = {
                 return;
             }
 
-            // Premium account service handler
+            // Account services go to payout channel
             const payoutChannelId = '1429777854425464872';
             const payoutChannel = interaction.client.channels.cache.get(payoutChannelId);
 
             if (!payoutChannel) {
                 userRequests.delete(interaction.user.id);
                 return interaction.update({
-                    content: '❌ **System Error!** Payout channel not found. Please contact administration.',
+                    content: '❌ Payout channel error.',
                     components: [],
                     ephemeral: true
                 });
             }
 
-            // Premium request embed
             const requestEmbed = new EmbedBuilder()
                 .setColor('#00FF00')
-                .setTitle('🎁 **NEW PREMIUM REWARD REQUEST**')
-                .setDescription(`**User:** ${interaction.user} │ **Tag:** ${interaction.user.tag}`)
+                .setTitle('Payout Request')
+                .setDescription(`**User:** ${interaction.user.tag}\n**Service:** ${serviceNames[selectedService]}`)
                 .addFields(
                     {
-                        name: '📦 Selected Reward',
-                        value: `**${serviceNames[selectedService]}**`,
+                        name: 'Status',
+                        value: 'Pending',
                         inline: true
                     },
                     {
-                        name: '🎯 Required Invites',
-                        value: `**${requiredInvites} Invites**`,
-                        inline: true
-                    },
-                    {
-                        name: '🆔 User ID',
-                        value: `\`\`\`${interaction.user.id}\`\`\``,
-                        inline: false
-                    },
-                    {
-                        name: '📊 Status',
-                        value: '🟡 **Pending Review**',
-                        inline: true
-                    },
-                    {
-                        name: '⏰ Request Time',
-                        value: `<t:${Math.floor(Date.now() / 1000)}:R>`,
+                        name: 'Invites Required',
+                        value: `${requiredInvites}`,
                         inline: true
                     }
                 )
-                .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true, size: 512 }))
-                .setImage('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/request_banner.png')
-                .setFooter({ 
-                    text: `Request ID: ${interaction.user.id.slice(-6)}-${Date.now().toString().slice(-6)} • Premium Rewards System`,
-                    iconURL: 'https://media.discordapp.net/attachments/123456789012345678/123456789012345678/badge_icon.png'
-                })
                 .setTimestamp();
 
-            // Premium action buttons
             const approveButton = new ButtonBuilder()
                 .setCustomId(`approve_${interaction.user.id}_${selectedService}`)
-                .setLabel('✅ APPROVE & SEND')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('🚀');
+                .setLabel('Approve')
+                .setStyle(ButtonStyle.Success);
 
-            const denyButton = new ButtonBuilder()
-                .setCustomId(`deny_${interaction.user.id}_${selectedService}`)
-                .setLabel('❌ DENY REQUEST')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('⛔');
-
-            const actionRow = new ActionRowBuilder().addComponents(approveButton, denyButton);
+            const actionRow = new ActionRowBuilder().addComponents(approveButton);
 
             try {
                 await payoutChannel.send({
-                    content: `📬 **NEW REWARD REQUEST** ${interaction.user} │ **${requiredInvites} INVITES REQUIRED**`,
+                    content: `New request from ${interaction.user}`,
                     embeds: [requestEmbed],
                     components: [actionRow]
                 });
 
-                // Premium success message
-                const successEmbed = new EmbedBuilder()
-                    .setColor('#00FF00')
-                    .setTitle('✅ **REQUEST SUBMITTED SUCCESSFULLY!**')
-                    .setDescription(`**Reward:** ${serviceNames[selectedService]}\n**Status:** Awaiting staff approval`)
-                    .addFields(
-                        {
-                            name: '📋 What Happens Next?',
-                            value: '• Staff will review your request\n• You\'ll receive reward via DM\n• **VOUCH WITHIN 48 HOURS!**',
-                            inline: false
-                        },
-                        {
-                            name: '⚠️ VOUCH REQUIREMENT',
-                            value: '**Failure to vouch within 48 hours = PERMANENT EVENT BAN**',
-                            inline: false
-                        }
-                    )
-                    .setThumbnail('https://media.discordapp.net/attachments/123456789012345678/123456789012345678/success_icon.png')
-                    .setFooter({ text: 'Keep your DMs open! We will contact you soon.' })
-                    .setTimestamp();
-
                 await interaction.update({
-                    embeds: [successEmbed],
+                    content: `✅ Request submitted for **${serviceNames[selectedService]}**`,
                     components: []
                 });
 
@@ -479,71 +319,174 @@ module.exports = {
 
             } catch (error) {
                 userRequests.delete(interaction.user.id);
-                console.error('Error sending payout request:', error);
-                
-                const errorEmbed = new EmbedBuilder()
-                    .setColor('#FF0000')
-                    .setTitle('❌ **REQUEST FAILED**')
-                    .setDescription('Failed to submit your reward request. Please try again later.')
-                    .setFooter({ text: 'System Error • Please contact staff if this continues' });
-
                 await interaction.update({
-                    embeds: [errorEmbed],
-                    components: []
+                    content: '❌ Failed to submit request.',
+                    components: [],
+                    ephemeral: true
                 });
             }
         }
     },
 
-    // ... (other methods remain the same but with premium styling)
+    async handleApprove(interaction) {
+        if (interaction.customId.startsWith('approve_')) {
+            const [, userId, service] = interaction.customId.split('_');
+            const user = await interaction.client.users.fetch(userId);
 
-    isUserBanned(userId) {
-        const userData = userVouchTimers.get(userId);
-        if (!userData) return false;
-        
-        return userData.banned === true;
+            const serviceNames = {
+                'minecraft_2': 'Minecraft Account (2 invites)',
+                'minecraft_5': '3 Minecraft Accounts (5 invites)',
+                'xbox_gamepass': 'Xbox GamePass (5 invites)',
+                'xbox_ultimate': 'Xbox Ultimate (8 invites)',
+                'robux_method': 'Robux Method (6 invites)'
+            };
+
+            if (service === 'robux_method') {
+                const robuxEmbed = new EmbedBuilder()
+                    .setColor('#FF0000')
+                    .setTitle('Robux Method')
+                    .setDescription('**Requirements:**\n- Apple/Android device\n- iTunes/Google Play money')
+                    .addFields(
+                        {
+                            name: 'Steps:',
+                            value: `1. Buy robux on your device
+2. Spend them
+3. Go to reportaproblem.apple.com
+4. Sign in
+5. Request refund
+6. Use reason: "My child made this purchase by mistake"
+7. Wait 6-48 hours for refund
+8. Repeat carefully`,
+                            inline: false
+                        }
+                    );
+
+                try {
+                    await user.send({
+                        content: 'Your Robux Method:',
+                        embeds: [robuxEmbed]
+                    });
+
+                    const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+                        .setColor('#00FF00')
+                        .spliceFields(0, 1, {
+                            name: 'Status',
+                            value: 'Completed',
+                            inline: true
+                        });
+
+                    await interaction.message.edit({
+                        embeds: [updatedEmbed],
+                        components: []
+                    });
+
+                    await interaction.reply({
+                        content: `✅ Robux method sent to ${user.tag}`,
+                        ephemeral: true
+                    });
+
+                    this.logPayoutRequest(user, service, 'COMPLETED');
+                    userRequests.delete(userId);
+
+                } catch (error) {
+                    await interaction.reply({
+                        content: `❌ Failed to send DM to ${user.tag}`,
+                        ephemeral: true
+                    });
+                }
+                return;
+            }
+
+            // For other services, request credentials
+            const credentialsModal = new ModalBuilder()
+                .setCustomId(`credentials_${userId}_${service}`)
+                .setTitle('Enter Credentials');
+
+            const emailInput = new TextInputBuilder()
+                .setCustomId('email_input')
+                .setLabel('Email:Password')
+                .setPlaceholder('email:password')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true);
+
+            const modalRow = new ActionRowBuilder().addComponents(emailInput);
+            credentialsModal.addComponents(modalRow);
+
+            await interaction.showModal(credentialsModal);
+        }
     },
 
-    async logPayoutAction(client, action, description, user = null) {
-        const historyChannelId = '1429770521104486433';
-        const historyChannel = client.channels.cache.get(historyChannelId);
-        
-        if (!historyChannel) {
-            console.error('History channel not found!');
-            return;
+    async handleCredentialsModal(interaction) {
+        if (interaction.customId.startsWith('credentials_')) {
+            const [, userId, service] = interaction.customId.split('_');
+            const user = await interaction.client.users.fetch(userId);
+            const credentials = interaction.fields.getTextInputValue('email_input');
+
+            if (!credentials.includes(':')) {
+                return interaction.reply({
+                    content: '❌ Use email:password format.',
+                    ephemeral: true
+                });
+            }
+
+            const serviceNames = {
+                'minecraft_2': 'Minecraft Account (2 invites)',
+                'minecraft_5': '3 Minecraft Accounts (5 invites)',
+                'xbox_gamepass': 'Xbox GamePass (5 invites)',
+                'xbox_ultimate': 'Xbox Ultimate (8 invites)'
+            };
+
+            try {
+                await user.send({
+                    content: `Your ${serviceNames[service]}:\n\`\`\`${credentials}\`\`\``
+                });
+
+                const updatedEmbed = EmbedBuilder.from(interaction.message.embeds[0])
+                    .setColor('#00FF00')
+                    .spliceFields(0, 1, {
+                        name: 'Status',
+                        value: 'Completed',
+                        inline: true
+                    });
+
+                await interaction.message.edit({
+                    embeds: [updatedEmbed],
+                    components: []
+                });
+
+                await interaction.reply({
+                    content: `✅ Credentials sent to ${user.tag}`,
+                    ephemeral: true
+                });
+
+                this.logPayoutRequest(user, service, 'COMPLETED');
+                userRequests.delete(userId);
+
+            } catch (error) {
+                await interaction.reply({
+                    content: `❌ Failed to send DM to ${user.tag}`,
+                    ephemeral: true
+                });
+            }
         }
+    },
+
+    async logPayoutRequest(user, service, status) {
+        const historyChannelId = '1429770521104486433';
+        const historyChannel = user.client.channels.cache.get(historyChannelId);
+        
+        if (!historyChannel) return;
 
         const logEmbed = new EmbedBuilder()
-            .setColor(this.getActionColor(action))
-            .setTitle(`📊 **${action.replace('_', ' ').toUpperCase()}**`)
-            .setDescription(description)
-            .setTimestamp()
-            .setFooter({ text: 'Premium Rewards System Logger' });
-
-        if (user) {
-            logEmbed.setThumbnail(user.displayAvatarURL({ dynamic: true }));
-            logEmbed.addFields({
-                name: '👤 User',
-                value: `${user.tag} (${user.id})`,
-                inline: true
-            });
-        }
+            .setColor(status === 'COMPLETED' ? '#00FF00' : '#FFA500')
+            .setTitle('Payout Log')
+            .setDescription(`**User:** ${user.tag}\n**Service:** ${service}\n**Status:** ${status}`)
+            .setTimestamp();
 
         try {
             await historyChannel.send({ embeds: [logEmbed] });
         } catch (error) {
-            console.error('Error logging payout action:', error);
+            console.error('Error logging:', error);
         }
-    },
-
-    getActionColor(action) {
-        const colors = {
-            'PANEL_CREATED': '#5865F2',
-            'SUBMITTED': '#FEE75C',
-            'COMPLETED': '#57F287',
-            'TICKET_REQUIRED': '#FEE75C',
-            'DENIED': '#ED4245'
-        };
-        return colors[action] || '#95A5A6';
     }
 };
