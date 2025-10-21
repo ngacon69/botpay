@@ -1,4 +1,4 @@
-import { 
+const { 
     SlashCommandBuilder,
     ActionRowBuilder, 
     StringSelectMenuBuilder, 
@@ -9,12 +9,13 @@ import {
     TextInputBuilder, 
     TextInputStyle,
     PermissionFlagsBits 
-} from 'discord.js';
+} = require('discord.js');
 
+// Store active payouts (in production, use a database)
 const activePayouts = new Map();
 const userActiveRequests = new Map();
 
-export default {
+module.exports = {
     data: new SlashCommandBuilder()
         .setName('panelpayout')
         .setDescription('Create invite rewards panel')
@@ -28,7 +29,7 @@ export default {
             });
         }
 
-        // Hỏi màu embed
+        // Ask for embed color
         const colorModal = new ModalBuilder()
             .setCustomId('colorModal')
             .setTitle('Embed Color Configuration');
@@ -45,7 +46,7 @@ export default {
 
         await interaction.showModal(colorModal);
 
-        // Xử lý khi modal submit
+        // Handle modal submission
         const filter = (i) => i.customId === 'colorModal';
         
         try {
@@ -56,7 +57,7 @@ export default {
 
             const color = modalInteraction.fields.getTextInputValue('colorInput');
 
-            // Tạo embed
+            // Create embed
             const embed = new EmbedBuilder()
                 .setColor(color)
                 .setTitle('<a:diamond1:1430167258302255195> INVITE REWARD <a:diamond1:1430167258302255195>')
@@ -76,7 +77,7 @@ export default {
                 `)
                 .setFooter({ text: 'All rewards will be sent via DM • One active request per user' });
 
-            // Tạo nút
+            // Create button
             const button = new ButtonBuilder()
                 .setCustomId('selectService')
                 .setLabel('Claim Reward')
@@ -103,10 +104,10 @@ export default {
         }
     },
 
-    // Xử lý tương tác nút
+    // Handle button interactions
     async handleButton(interaction) {
         if (interaction.customId === 'selectService') {
-            // Kiểm tra nếu user đã có request active
+            // Check if user already has an active request
             if (userActiveRequests.has(interaction.user.id)) {
                 const currentService = userActiveRequests.get(interaction.user.id);
                 return interaction.reply({
@@ -173,12 +174,12 @@ export default {
         }
     },
 
-    // Xử lý select menu
+    // Handle select menu interactions
     async handleSelectMenu(interaction) {
         if (interaction.customId === 'serviceSelect') {
             const selectedService = interaction.values[0];
             
-            // Kiểm tra lại nếu user đã có request active
+            // Check again if user already has an active request
             if (userActiveRequests.has(interaction.user.id)) {
                 const currentService = userActiveRequests.get(interaction.user.id);
                 return interaction.reply({
@@ -206,7 +207,7 @@ export default {
                 });
             }
 
-            // Tạo payout request
+            // Create payout request
             const payoutRequest = {
                 userId: interaction.user.id,
                 service: service.name,
@@ -218,7 +219,7 @@ export default {
             activePayouts.set(interaction.user.id, payoutRequest);
             userActiveRequests.set(interaction.user.id, service.name);
 
-            // Xử lý các service cần ticket
+            // Handle services that require tickets
             if (service.requiresTicket) {
                 const ticketChannelId = '1429770480323133471';
                 
@@ -238,7 +239,7 @@ export default {
                     ephemeral: true
                 });
 
-                // Gửi request đến channel payout
+                // Send request to payout channel
                 const payoutChannel = interaction.client.channels.cache.get('1429777854425464872');
                 if (payoutChannel && payoutChannel.isTextBased()) {
                     const payoutEmbed = new EmbedBuilder()
@@ -257,7 +258,7 @@ export default {
                 }
 
             } else if (selectedService === 'robux_method') {
-                // Xử lý Robux Method (không cần modal)
+                // Handle Robux Method (no modal needed)
                 const confirmButton = new ButtonBuilder()
                     .setCustomId(`confirm_robux_${interaction.user.id}`)
                     .setLabel('Get Robux Method')
@@ -285,7 +286,7 @@ export default {
                 });
 
             } else {
-                // Các service khác cần account info
+                // Other services need account info
                 const confirmButton = new ButtonBuilder()
                     .setCustomId(`confirm_${interaction.user.id}`)
                     .setLabel('Provide Account Info')
@@ -319,7 +320,7 @@ export default {
         }
     },
 
-    // Xử lý confirm/cancel buttons
+    // Handle confirm/cancel buttons
     async handleConfirmButton(interaction) {
         if (interaction.customId.startsWith('confirm_robux_')) {
             const userId = interaction.customId.replace('confirm_robux_', '');
@@ -331,7 +332,7 @@ export default {
                 });
             }
 
-            // Gửi Robux Method qua DM
+            // Send Robux Method via DM
             const robuxEmbed = new EmbedBuilder()
                 .setColor(0x9C59B6)
                 .setTitle('💰 ROBUX METHOD GUIDE')
@@ -363,12 +364,12 @@ export default {
             try {
                 await interaction.user.send({ embeds: [robuxEmbed] });
                 
-                // Cập nhật status
+                // Update status
                 const payoutRequest = activePayouts.get(userId);
                 if (payoutRequest) {
                     payoutRequest.status = 'completed';
                     
-                    // Log vào history channel
+                    // Log to history channel
                     const historyChannel = interaction.client.channels.cache.get('1429770521104486433');
                     if (historyChannel && historyChannel.isTextBased()) {
                         const historyEmbed = new EmbedBuilder()
@@ -411,7 +412,7 @@ export default {
                 });
             }
 
-            // Hiển thị modal để nhập account info
+            // Show modal for account info
             const modal = new ModalBuilder()
                 .setCustomId(`accountModal_${userId}`)
                 .setTitle('Account Information');
@@ -431,7 +432,7 @@ export default {
         }
     },
 
-    // Xử lý cancel buttons
+    // Handle cancel buttons
     async handleCancelButton(interaction) {
         const userId = interaction.customId.replace('cancel_', '').replace('_robux', '');
         
@@ -442,7 +443,7 @@ export default {
             });
         }
 
-        // Xóa request
+        // Remove request
         activePayouts.delete(userId);
         userActiveRequests.delete(userId);
 
@@ -452,7 +453,7 @@ export default {
         });
     },
 
-    // Xử lý modal submit
+    // Handle modal submissions
     async handleModalSubmit(interaction) {
         if (interaction.customId.startsWith('accountModal_')) {
             const userId = interaction.customId.replace('accountModal_', '');
@@ -466,13 +467,13 @@ export default {
                 });
             }
 
-            // Cập nhật payout request
+            // Update payout request
             const payoutRequest = activePayouts.get(userId);
             if (payoutRequest) {
                 payoutRequest.accountInfo = accountInfo;
                 payoutRequest.status = 'completed';
 
-                // Gửi đến payout channel
+                // Send to payout channel
                 const payoutChannel = interaction.client.channels.cache.get('1429777854425464872');
                 if (payoutChannel && payoutChannel.isTextBased()) {
                     const payoutEmbed = new EmbedBuilder()
@@ -490,7 +491,7 @@ export default {
                     await payoutChannel.send({ embeds: [payoutEmbed] });
                 }
 
-                // Log vào history channel
+                // Log to history channel
                 const historyChannel = interaction.client.channels.cache.get('1429770521104486433');
                 if (historyChannel && historyChannel.isTextBased()) {
                     const historyEmbed = new EmbedBuilder()
