@@ -1,51 +1,82 @@
-import { Events } from 'discord.js';
-import Event from '../templates/Event.js';
-export default new Event({
+const { Events } = require('discord.js');
+
+module.exports = {
     name: Events.InteractionCreate,
     async execute(interaction) {
-        // If it's a slash command
         if (interaction.isChatInputCommand()) {
-            if (!client.commands.has(interaction.commandName))
+            const command = interaction.client.commands.get(interaction.commandName);
+
+            if (!command) {
+                console.error(`No command matching ${interaction.commandName} was found.`);
                 return;
-            try {
-                const command = client.commands.get(interaction.commandName);
-                if (!command.execute) {
-                    console.error(`💀 No exec handler for ${command.data.name}`);
-                    await interaction.reply({
-                        content: "Bruh, something went 💥 executing this command!",
-                        ephemeral: true
-                    });
-                    return;
-                }
-                // execute the command
-                await command.execute(interaction);
             }
-            catch (err) {
-                console.error(err);
+
+            try {
+                await command.execute(interaction);
+            } catch (error) {
+                console.error(error);
                 await interaction.reply({
-                    content: "Oopsie 😵‍💫 something broke while running this command!",
+                    content: 'There was an error while executing this command!',
                     ephemeral: true
                 });
             }
-            // If it's autocomplete
-        }
-        else if (interaction.isAutocomplete()) {
-            if (!client.commands.has(interaction.commandName))
-                return;
-            try {
-                const command = client.commands.get(interaction.commandName);
-                if (!command.autocomplete) {
-                    console.error(`🤔 No autocomplete handler for ${command.data.name}`);
-                    await interaction.respond([
-                        { name: 'oops failed autocomplete 😬', value: 'error' }
-                    ]);
-                    return;
+        } else if (interaction.isButton()) {
+            // Handle panelpayout buttons
+            if (interaction.customId === 'selectService' || 
+                interaction.customId.startsWith('confirm_') || 
+                interaction.customId.startsWith('cancel_')) {
+                
+                const panelPayout = interaction.client.commands.get('panelpayout');
+                if (!panelPayout) return;
+
+                try {
+                    if (interaction.customId === 'selectService') {
+                        await panelPayout.handleButton(interaction);
+                    } else if (interaction.customId.startsWith('confirm_')) {
+                        await panelPayout.handleConfirmButton(interaction);
+                    } else if (interaction.customId.startsWith('cancel_')) {
+                        await panelPayout.handleCancelButton(interaction);
+                    }
+                } catch (error) {
+                    console.error('Error handling button interaction:', error);
+                    await interaction.reply({
+                        content: 'There was an error processing your request!',
+                        ephemeral: true
+                    });
                 }
-                await command.autocomplete(interaction);
             }
-            catch (err) {
-                console.error('yeet, autocomplete fail', err);
+        } else if (interaction.isStringSelectMenu()) {
+            // Handle panelpayout select menu
+            if (interaction.customId === 'serviceSelect') {
+                const panelPayout = interaction.client.commands.get('panelpayout');
+                if (!panelPayout) return;
+
+                try {
+                    await panelPayout.handleSelectMenu(interaction);
+                } catch (error) {
+                    console.error('Error handling select menu interaction:', error);
+                    await interaction.reply({
+                        content: 'There was an error processing your selection!',
+                        ephemeral: true
+                    });
+                }
+            }
+        } else if (interaction.isModalSubmit()) {
+            // Handle panelpayout modals
+            if (interaction.customId.startsWith('accountModal_') || interaction.customId === 'colorModal') {
+                const panelPayout = interaction.client.commands.get('panelpayout');
+                if (!panelPayout) return;
+
+                try {
+                    await panelPayout.handleModalSubmit(interaction);
+                } catch (error) {
+                    console.error('Error handling modal interaction:', error);
+                    await interaction.reply({
+                        content: 'There was an error processing your submission!',
+                        ephemeral: true
+                    });
+                }
             }
         }
     }
-});
+};
