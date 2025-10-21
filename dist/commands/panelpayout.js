@@ -1,9 +1,10 @@
-import { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, PermissionFlagsBits } from 'discord.js';
 import { SlashCommandBuilder } from '@discordjs/builders';
-// Lưu trữ tạm thời các yêu cầu payout
+import { PermissionFlagsBits } from 'discord.js';
+
 const activePayouts = new Map();
-const userActiveRequests = new Map(); // userId -> service
-module.exports = {
+const userActiveRequests = new Map();
+
+export default {
     data: new SlashCommandBuilder()
         .setName('panelpayout')
         .setDescription('Create invite rewards panel')
@@ -15,6 +16,9 @@ module.exports = {
                 ephemeral: true
             });
         }
+    }
+};
+
         // Hỏi màu embed
         const colorModal = new ModalBuilder()
             .setCustomId('colorModal')
