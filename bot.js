@@ -4,9 +4,6 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Kiểm tra instance ID hiện tại trên Render
-console.log("INSTANCE_ID:", process.env.INSTANCE_ID);
-
 // PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_TtxZX2jLUoE3@ep-late-glitter-a4espvn0-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
@@ -136,18 +133,17 @@ client.once('ready', async () => {
 
 // Prefix commands handler ($)
 client.on('messageCreate', async message => {
-    const INSTANCE_ID = process.env.INSTANCE_ID; // Render tự cấp
+    // --- Redis lock đầu tiên ---
+    const lock = await redis.set(`lock:${message.id}`, "1", "NX", "EX", 5);
+    if (!lock) return; // instance khác đã xử lý, bỏ qua
 
-    // Chỉ cho instance chính gửi tin, ví dụ flf55
-    if (INSTANCE_ID !== "flf55") return;
-
+    // Kiểm tra prefix và bot
     if (!message.content.startsWith('$') || message.author.bot) return;
 
     const args = message.content.slice(1).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
     const command = client.prefixCommands.get(commandName);
-
     if (!command) return;
 
     try {
@@ -161,8 +157,6 @@ client.on('messageCreate', async message => {
         });
     }
 });
-
-
 // Slash commands handler
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
