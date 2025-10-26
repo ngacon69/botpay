@@ -133,6 +133,11 @@ client.once('ready', async () => {
 
 // Prefix commands handler ($)
 client.on('messageCreate', async message => {
+    const INSTANCE_ID = process.env.INSTANCE_ID; // Render tự cấp
+
+    // Chỉ cho instance chính gửi tin, ví dụ flf55
+    if (INSTANCE_ID !== "flf55") return;
+
     if (!message.content.startsWith('$') || message.author.bot) return;
 
     const args = message.content.slice(1).trim().split(/ +/);
@@ -153,6 +158,7 @@ client.on('messageCreate', async message => {
         });
     }
 });
+
 
 // Slash commands handler
 client.on('interactionCreate', async interaction => {
