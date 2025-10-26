@@ -4,6 +4,9 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Kiểm tra instance ID hiện tại trên Render
+console.log("INSTANCE_ID:", process.env.INSTANCE_ID);
+
 // PostgreSQL connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_TtxZX2jLUoE3@ep-late-glitter-a4espvn0-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
